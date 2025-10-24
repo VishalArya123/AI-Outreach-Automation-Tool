@@ -56,77 +56,115 @@ outreach-ai-app/
 ---
 
 ## ✨ Key Features
-- **AI-Powered Emails**: Input recipient, topic, tone, and goal; get fully personalized emails with no blanks. 📧
-- **Custom Image Generation**: AI creates relevant images for each email, auto-described or manually specified. 🖼️
-- **Batch Scheduling**: Send emails to multiple recipients from CSV/Excel files with "Names" and "Emails" columns. 📊
-- **Real-Time Dashboard**: Monitor campaign schedules, statuses, and send history in the Streamlit sidebar. 📈
-- **HTML Email Rendering**: Preserves line breaks, signatures, and embeds images. 📄
-- **Legal Compliance**: Includes CAN-SPAM/GDPR-compliant footers with unsubscribe links. ✅
-- **Campaign Management**: Cancel future sends and auto-clean completed campaign statuses. 🗑️
+- **AI-Powered Emails**: Input recipient, topic, tone, and goal; get fully personalized emails with no blanks. 📧  
+- **Custom Image Generation**: AI creates relevant images for each email, auto-described or manually specified. 🖼️  
+- **Batch Scheduling**: Send emails to multiple recipients from CSV/Excel files with "Names" and "Emails" columns. 📊  
+- **Real-Time Dashboard**: Monitor campaign schedules, statuses, and send history in the Streamlit sidebar. 📈  
+- **HTML Email Rendering**: Preserves line breaks, signatures, and embeds images. 📄  
+- **Legal Compliance**: Includes CAN-SPAM/GDPR-compliant footers with unsubscribe links. ✅  
+- **Campaign Management**: Cancel future sends and auto-clean completed campaign statuses. 🗑️  
 
 ---
 
-## 🛠️ Project Development Steps
-
-### 1. Environment Setup
-- Install **Python 3.9+** and set up a virtual environment:
-  ```bash
-  python -m venv venv
-  source venv/bin/activate  # On Windows: venv\Scripts\activate
-  ```
-- Install dependencies:
-  ```bash
-  pip install -r requirements.txt
-  ```
-
-### 2. Core Integration
-- Create a `.env` file in the project root with the following:
-  ```env
-  GEMINI_API_KEY=your_gemini_api_key
-  HUGGINGFACE_API_KEY=your_huggingface_api_key
-  MAILJET_API_KEY=your_mailjet_api_key
-  MAILJET_SECRET_KEY=your_mailjet_secret_key
-  SENDER_EMAIL=your_verified_email@example.com
-  SENDER_NAME=Your Name
-  COMPANY_ADDRESS=Your Company Address
-  ```
-- Obtain API keys from [Gemini](https://ai.google.dev/), [Hugging Face](https://huggingface.co/), and [Mailjet](https://www.mailjet.com/).
-
-### 3. AI Modules
-- **Email Generation**: Gemini AI creates complete email bodies based on prompt templates in `prompt_templates.py`.
-- **Image Description**: Gemini suggests image descriptions from email context or accepts manual input.
-- **Image Creation**: Hugging Face’s FLUX model generates images, saved and attached/embedded in emails.
-
-### 4. Email Delivery
-- Configure Mailjet with verified sender email and SPF/DKIM authentication.
-- Send multipart HTML/text emails with proper formatting, embedded images, and legal footers.
-
-### 5. Batch Scheduling & Tracking
-- Use `apscheduler` to schedule single or batch emails with customizable intervals.
-- Track campaigns in the dashboard, group jobs by campaign ID, and allow cancellation.
-
-### 6. Multi-Recipient Import
-- Upload CSV/Excel files with "Names" and "Emails" columns.
-- Validate file format before scheduling to prevent errors.
-
-### 7. User Experience & Compliance
-- Collect sender’s name, role, and contact details via Streamlit form.
-- Append AI-generated or user-defined professional signatures.
-- Ensure all emails include company address and unsubscribe links for CAN-SPAM/GDPR compliance.
+## 🧩 System Architecture
+```mermaid
+graph TB
+    subgraph "User Interface Layer"
+        A[Streamlit Frontend]
+        B[Session State Manager]
+    end
+    
+    subgraph "Application Logic Layer"
+        C[app.py - Main Controller]
+        D[Email Preview Generator]
+        E[Campaign Manager]
+    end
+    
+    subgraph "Helper Modules"
+        F[gemini_helper.py]
+        G[image_generator.py]
+        H[mailjet_helper.py]
+        I[scheduler_helper.py]
+        J[prompt_templates.py]
+    end
+    
+    subgraph "External APIs"
+        K[Gemini 2.5 Flash API]
+        L[HuggingFace Inference API]
+        M[Mailjet Email API]
+    end
+    
+    subgraph "Background Services"
+        N[APScheduler]
+        O[Job Status Tracker]
+    end
+    
+    subgraph "Data Storage"
+        P[.env Configuration]
+        Q[CSV/Excel Upload]
+        R[Generated Images]
+    end
+    
+    A --> C
+    B --> C
+    C --> D
+    C --> E
+    
+    D --> F
+    D --> G
+    E --> I
+    E --> H
+    
+    F --> J
+    F --> K
+    G --> L
+    H --> M
+    I --> N
+    
+    N --> O
+    O --> C
+    
+    P --> F
+    P --> G
+    P --> H
+    Q --> C
+    G --> R
+    
+    style A fill:#e1f5e1
+    style K fill:#fff4e1
+    style L fill:#fff4e1
+    style M fill:#e1e5ff
+    style N fill:#ffe1e1
+```
 
 ---
 
 ## 🛠️ Flowchart of Procedure
 ```mermaid
 graph TD
-    A[User Inputs Details<br>Recipient, Topic, Tone, Goal] --> B[Streamlit UI<br>app.py]
-    B --> C[Gemini AI Generates<br>Email Body & Image Description<br>gemini_helper.py]
-    C --> D[Hugging Face FLUX<br>Generates Image<br>image_generator.py]
-    D --> E[Mailjet Sends Email<br>HTML/Text, Image, Footer<br>mailjet_helper.py]
-    B --> F[Schedule Single/Batch Emails<br>scheduler_helper.py]
-    F --> G[Real-Time Dashboard<br>Monitor Status & History]
-    E --> G
-    G --> H[Cancel Campaign<br>scheduler_helper.py]
+    A[User Opens Application<br>Streamlit UI] --> B[Enter Sender Info, Recipients,<br>Email Topic, Template & Tone]
+    B --> C[Click 'Generate & Preview']
+    C --> D[Gemini AI API<br>Generates Email Text<br>gemini_helper.py]
+    D --> E[Hugging Face API<br>Generates Image<br>image_generator.py]
+    
+    E -->|Success| F[Display Generated Email & Image<br>Editable in Streamlit UI]
+    E -->|Credit Limit Exceeded| G[Fallback to Unsplash Image]
+    G --> F
+
+    F --> H[User Edits Subject & Body<br>Confirms & Schedules Campaign]
+    H --> I[APScheduler Creates & Manages Jobs<br>scheduler_helper.py]
+    I --> J[Mailjet API Sends Emails<br>mailjet_helper.py]
+
+    J -->|Success| K[Update Dashboard: Sent ✅]
+    J -->|Failure| L[Update Dashboard: Failed ❌]
+
+    K --> M[Check if All Emails Sent]
+    L --> M
+    M -->|Complete| N[Remove Campaign from Dashboard<br>Session State Cleared]
+
+    H --> O[User Cancels Campaign]
+    O --> P[APScheduler Removes All Jobs]
+    P --> Q[Update Dashboard: Campaign Cancelled 🛑]
 ```
 
 ---
@@ -173,4 +211,5 @@ graph TD
 | APScheduler    | ⏰       |
 | Python         | 🐍       |
 
-This project leverages free/open APIs to deliver a powerful, user-friendly solution for AI-driven email outreach. Happy automating! 🎉
+This project leverages free/open APIs to deliver a powerful, user-friendly solution for AI-driven email outreach.  
+**Happy automating! 🎉**
